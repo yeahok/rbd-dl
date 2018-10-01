@@ -526,7 +526,7 @@ def login(username, password, lib_id, session):
 ##
 
 
-settings = load_settings_file("settings.txt")
+settings = load_settings_file("settings.cfg")
 if len(settings) == 0:
 	print("settings not loaded")
 	sys.exit()
