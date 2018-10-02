@@ -8,6 +8,7 @@ import hashlib
 import subprocess
 import os
 import simplejson as json
+import re
 
 import requests
 import fitz
@@ -237,17 +238,16 @@ def get_issue_list(session):
 #get auth from reader page
 def get_auth(reader_url, session):
     reader_request = session.get(reader_url, allow_redirects=True)
-    soup = BeautifulSoup(reader_request.text, 'html.parser')
     print(reader_request.status_code)
 
-    
-    js = soup.findAll('script')[4].string
-    js2 = soup.findAll('script')[5].string
+    match1 = re.search("(?<=InitZinioReader\( ')\d+", reader_request.text)
+    match2 = re.search("\w+(?='\);)", reader_request.text)
+    match3 = re.search("(?<=NEWSSTAND_ID\":)\d+", reader_request.text)
 
     auth = {
-        "auth_code": find_between(js, "', '", "');"),
-        "user_id": find_between(js, "InitZinioReader( '", "', '"),
-        "newsstand_id": find_between(js2, 'NEWSSTAND_ID":', ',"ASSETS_PATH')
+        "auth_code": match1.group(),
+        "user_id": match2.group(),
+        "newsstand_id": match3.group()
     }
     return auth
 
@@ -467,7 +467,7 @@ def download_all_issues(issues, auth, session):
 
     if (len(downloadList) == 0):
         print("no new issues to download")
-        sys.exit("no new issues to download")
+        sys.exit()
 
     print("download history")
     for i in range(0,len(downloadHistory)):
@@ -493,12 +493,14 @@ def download_all_issues(issues, auth, session):
 def getLibID(landing_page_url):
     homepage = requests.get(landing_page_url)
 
-    soup = BeautifulSoup(homepage.text, 'html.parser')
-    js = soup.findAll('script')[11].string
+    match = re.search("(?<=g_nLibraryId = )\d+", homepage.text)
 
-    lib_id = find_between(js, "g_nLibraryId = ", ";\n-->")
-    
-    return lib_id
+    if match:
+        lib_id = match.group()
+        return lib_id
+    else:
+        print("lib_id not found on landing page")
+        sys.exit()    
 	
 def login(username, password, lib_id, session):
     jar = requests.cookies.RequestsCookieJar()
