@@ -537,8 +537,8 @@ LANDING_PAGE = settings["landing_page"]
 
 session = requests.Session()
 
-lib_id = getLibID(LANDING_PAGE)
-login(USERNAME, PASSWORD, lib_id, session)
+LIB_ID = getLibID(LANDING_PAGE)
+login(USERNAME, PASSWORD, LIB_ID, session)
 
 issues = get_issue_list(session)
 
