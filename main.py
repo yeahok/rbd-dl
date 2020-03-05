@@ -1,3 +1,6 @@
+#need to pip install simplejson, bs4, PyPDF2, fitz and then PyMuPDF  
+#also need pdftk server exe in the directory where you run this python file
+
 import base64
 import sys
 import http.cookiejar
@@ -135,7 +138,7 @@ def add_links(pagesInfo, filename, outputfilename, subdirectory = False, outputs
 
     doc = fitz.open(path + filename)
 
-    print(pagesInfo[0])
+    #print(pagesInfo[0])
     working = 0
     
     for i in range(0, len(pagesInfo)):
@@ -157,6 +160,9 @@ def add_links(pagesInfo, filename, outputfilename, subdirectory = False, outputs
                     link["kind"] = fitz.LINK_GOTO
                     link["type"] = "goto"
                     link["page"] = int(href) - 3
+                    #edge case where page number link is negative
+                    if link["page"] < 3:
+                        continue
                 elif linktype == "external":
                     link["kind"] = fitz.LINK_URI
                     link["type"] = "uri"
@@ -240,14 +246,17 @@ def get_auth(reader_url, session):
     reader_request = session.get(reader_url, allow_redirects=True)
     print(reader_request.status_code)
 
-    match1 = re.search("(?<=InitZinioReader\( ')\d+", reader_request.text)
-    match2 = re.search("\w+(?='\);)", reader_request.text)
-    match3 = re.search("(?<=NEWSSTAND_ID\":)\d+", reader_request.text)
+    match1 = re.search("(?<=\'https://rb_reader.zinioapps.com/\', \').+(?=')", reader_request.text)
+    match1 = match1.group().split("', '")
+
+    new_reader_request = session.get("https://rb_reader.zinioapps.com/", allow_redirects=True)
+    match2 = re.search("(?<=NEWSSTAND_ID\":\")\d+(?=\")", new_reader_request.text)
+    
 
     auth = {
-        "auth_code": match1.group(),
-        "user_id": match2.group(),
-        "newsstand_id": match3.group()
+        "auth_code": match1[1],
+        "user_id": match1[0],
+        "newsstand_id": match2.group()
     }
     return auth
 
@@ -418,10 +427,11 @@ def download_full_issue(full_pdf_url, sectionsInfo, pagesInfo, pw, filename):
         add_toc(sectionsInfo, pagesInfo, "temp4.pdf", "temp5.pdf", "temp_dir", "temp_dir")
         #final output
         add_links(pagesInfo, "temp5.pdf", filename, subdirectory = "temp_dir")
-
         delete_file("temp1.pdf", "temp_dir")
         delete_file("temp2.pdf", "temp_dir")
         delete_file("temp3.pdf", "temp_dir")
+        #something stopping delete command from working on temp4.pdf in time so sleep works
+        time.sleep(1)
         delete_file("temp4.pdf", "temp_dir")
         delete_file("temp5.pdf", "temp_dir")
 
@@ -455,6 +465,8 @@ def download_split_issue(issue, pagesInfo, pdfPagesInfo, sectionsInfo, pw, auth,
     delete_file("temp1.pdf", "temp_dir")
     delete_file("temp2.pdf", "temp_dir")
     delete_file("temp3.pdf", "temp_dir")
+    #something stopping delete command from working on temp4.pdf in time so sleep works
+    time.sleep(1)
     delete_file("temp4.pdf", "temp_dir")
 
 #downloads all issues. also checks if already downloaded
@@ -548,6 +560,6 @@ auth = get_auth(issues[0]["full_url"], session)
 
 print("total issues found: " + str(len(issues)))
 
-##download_all_issues(issues, auth, session)
-
+#uncomment the following line to actually download pdfs
+#download_all_issues(issues, auth, session)
 
